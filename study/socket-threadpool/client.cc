@@ -33,6 +33,8 @@ int main(int argc, char *argv[])
 			// close(sockfd);
 			break;
 		}
+		if(strlen(buff)-1 <=0)
+			continue;
 		send(sockfd, buff, strlen(buff)-1,0);
 		memset(buff,0x00, 128);
 		recv(sockfd, buff, 127, 0 );

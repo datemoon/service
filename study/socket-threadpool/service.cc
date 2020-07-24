@@ -1,6 +1,9 @@
 #include <iostream>
 #include <stdlib.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
+ #include <netinet/tcp.h>
+
 
 #include <unistd.h>
 #include <error.h>
@@ -31,7 +34,17 @@ public:
 			int len = recv(connfd, recvbuf, sizeof(recvbuf), 0 );
 
 			if(len <= 0 )
+			{
+				if(errno == EAGAIN || errno == EINPROGRESS)
+				{
+					printf("EAGAIN=%d EINPROGRESS=%d %d\n",EAGAIN,EINPROGRESS,errno);
+					printf("timeout and continue\n");
+					continue;
+				}
+
 				printf("on buf.\n");
+				break;
+			}
 			printf("from |%d| receive \"%s\" \n", connfd, recvbuf);
 			//printf("Please input: ");
 			//fflush(stdout);
@@ -43,8 +56,10 @@ public:
 			}
 			sprintf(sendbuf, "from |%d| receive \"%s\" \n", connfd, recvbuf);
 			send(connfd, sendbuf, sizeof(sendbuf), 0);
+			printf("send |%d| : %s ok\n",connfd, recvbuf);
 		}
 		close(connfd);
+		printf("close |%d| ok.\n",connfd);
 		return 0;
 	}
 
@@ -59,7 +74,27 @@ int main(int argc, char *argv[])
 	ser.sin_family = AF_INET;
 	inet_aton("127.0.0.1",&ser.sin_addr);
 	ser.sin_port = htons(6500);
+	int keepalive = 1; // open keepalive
+	int keeptime = 5; // 5s no data
+	int keepinterval = 1;
+	int keepcount = 3;
 
+
+	setsockopt(sockfd,SOL_SOCKET, SO_KEEPALIVE, (void*)&keepalive,sizeof(keepalive));
+	setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, (void*)&keeptime, sizeof(keeptime));
+	setsockopt(sockfd, SOL_TCP, TCP_KEEPINTVL, (void*)&keepinterval, sizeof(keepinterval));
+	setsockopt(sockfd, SOL_TCP, TCP_KEEPCNT, (void*)&keepcount, sizeof(keepcount));
+	struct timeval rec_timeout;
+	rec_timeout.tv_sec = 3;
+	rec_timeout.tv_usec =0;
+	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (void*)&rec_timeout, sizeof(rec_timeout));
+	int flag = 1;
+	int len = sizeof(int);
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &flag, len) == -1)
+	{
+		printf("Cannot set socket options!");
+		return -1;
+	}
 	int res=bind(sockfd, (struct sockaddr *) & ser, sizeof(ser));
 	assert(res != -1);
 
@@ -72,7 +107,7 @@ int main(int argc, char *argv[])
 		socklen_t len = sizeof(cli);
 		int connectfd = accept(sockfd, (struct sockaddr *)&cli, &len);
 		if(connectfd < 0)
-			printf("cli connect failed.");
+			printf("cli connect failed.\n");
 		else
 		{
 			CTask *ta = new CMyTask;
