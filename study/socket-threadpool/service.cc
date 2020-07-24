@@ -38,8 +38,8 @@ public:
 				if(errno == EAGAIN || errno == EINPROGRESS)
 				{
 					printf("EAGAIN=%d EINPROGRESS=%d %d\n",EAGAIN,EINPROGRESS,errno);
-					printf("timeout and continue\n");
-					continue;
+					printf("|%d| timeout and continue\n",connfd);
+				//	continue;
 				}
 
 				printf("on buf.\n");
@@ -56,7 +56,7 @@ public:
 			}
 			sprintf(sendbuf, "from |%d| receive \"%s\" \n", connfd, recvbuf);
 			send(connfd, sendbuf, sizeof(sendbuf), 0);
-			printf("send |%d| : %s ok\n",connfd, recvbuf);
+			printf("send |%d| : %s ok\n",connfd, sendbuf);
 		}
 		close(connfd);
 		printf("close |%d| ok.\n",connfd);
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 	setsockopt(sockfd, SOL_TCP, TCP_KEEPINTVL, (void*)&keepinterval, sizeof(keepinterval));
 	setsockopt(sockfd, SOL_TCP, TCP_KEEPCNT, (void*)&keepcount, sizeof(keepcount));
 	struct timeval rec_timeout;
-	rec_timeout.tv_sec = 3;
+	rec_timeout.tv_sec = 1;
 	rec_timeout.tv_usec =0;
 	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (void*)&rec_timeout, sizeof(rec_timeout));
 	int flag = 1;
@@ -97,10 +97,11 @@ int main(int argc, char *argv[])
 	}
 	int res=bind(sockfd, (struct sockaddr *) & ser, sizeof(ser));
 	assert(res != -1);
+	
+	int nthread = 2;
+	listen(sockfd, nthread);
 
-	listen(sockfd, 5);
-
-	CThreadPool pool(5);
+	CThreadPool pool(nthread);
 
 	while(true)
 	{

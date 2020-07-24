@@ -26,6 +26,9 @@ int main(int argc, char *argv[])
 		printf("please input:");
 		fflush(stdout);
 		char buff[128] = {0};
+		char recvbuf[1024];
+		memset(recvbuf,0x00,sizeof(recvbuf));
+		memset(buff,0x00, 128);
 		fgets(buff,128, stdin);
 
 		if(strncmp(buff,"end",3) == 0)
@@ -36,9 +39,9 @@ int main(int argc, char *argv[])
 		if(strlen(buff)-1 <=0)
 			continue;
 		send(sockfd, buff, strlen(buff)-1,0);
-		memset(buff,0x00, 128);
-		recv(sockfd, buff, 127, 0 );
-		printf("%s\n",buff);
+		int len = recv(sockfd, recvbuf, sizeof(recvbuf), 0 );
+		//recv(sockfd, buff, sizeof(buff), 0 );
+		printf("recv %s\n",recvbuf);
 	}
 	close(sockfd);
 	return 0;
